@@ -1,0 +1,6 @@
+train: ../datasets/raquette_data/images/train
+val: ../datasets/raquette_data/images/valid
+test: ../datasets/raquette_data/images/test
+
+nc: 1
+names: ['raquette_noire_Flore']
