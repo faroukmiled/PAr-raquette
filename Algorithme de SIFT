@@ -1,0 +1,44 @@
+import cv2
+import numpy as np
+
+# Charger les deux images de raquettes
+img_orig = cv2.imread("raquette_origine.png", cv2.IMREAD_GRAYSCALE)
+img_3d = cv2.imread("raquette_3d.png", cv2.IMREAD_GRAYSCALE)
+
+# Initialiser l'algorithme SIFT
+sift = cv2.SIFT_create()
+
+# Détecter les points clés et les descripteurs sur l'image de la raquette d'origine
+keypoints_orig, descriptors_orig = sift.detectAndCompute(img_orig, None)
+
+# Détecter les points clés et les descripteurs sur l'image de la nouvelle raquette 3D
+keypoints_3d, descriptors_3d = sift.detectAndCompute(img_3d, None)
+
+# Trouver les correspondances de points entre les deux images en utilisant les descripteurs SIFT
+matcher = cv2.DescriptorMatcher_create(cv2.DescriptorMatcher_FLANNBASED)
+matches = matcher.match(descriptors_orig, descriptors_3d)
+
+# Trier les correspondances de points en fonction de leur score de similarité
+matches = sorted(matches, key=lambda x: x.distance)
+
+# Sélectionner les correspondances de points les plus fiables
+num_good_matches = int(len(matches) * 0.15)
+good_matches = matches[:num_good_matches]
+
+# Extraire les coordonnées des points correspondants
+points_orig = np.zeros((len(good_matches), 2), dtype=np.float32)
+points_3d = np.zeros((len(good_matches), 2), dtype=np.float32)
+
+for i, match in enumerate(good_matches):
+    points_orig[i, :] = keypoints_orig[match.queryIdx].pt
+    points_3d[i, :] = keypoints_3d[match.trainIdx].pt
+
+# Calculer la transformation géométrique en utilisant les correspondances de points
+M, mask = cv2.findHomography(points_orig, points_3d, cv2.RANSAC, 5.0)
+
+# Appliquer la transformation géométrique pour superposer les deux raquettes
+h, w = img_orig.shape
+img_aligned = cv2.warpPerspective(img_orig, M, (w, h))
+
+# Enregistrer l'image superposée
+cv2.imwrite("raquette_superposee.png", img_aligned)
